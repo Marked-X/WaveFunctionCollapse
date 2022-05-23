@@ -1,18 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Tile : MonoBehaviour
 {
+    public Prototype prototype = null;
 
-    void Start()
+    public void Initialize(Prototype prot)
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        prototype = prot;
+        Image image = gameObject.GetComponent<Image>();
+        if (image)
+        {
+            image.sprite = prototype.sprite;
+        }
     }
 }
