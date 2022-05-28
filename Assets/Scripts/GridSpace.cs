@@ -82,7 +82,7 @@ public class GridSpace : MonoBehaviour
             currentGridSpace.isChecked = true;
         }
 
-        WaveFunction.Instance.RestartGrid();
+        WaveFunction.Instance.ResetGridCheck();
     }
 
     private Sides CheckSide(GridSpace main, GridSpace neighbour)

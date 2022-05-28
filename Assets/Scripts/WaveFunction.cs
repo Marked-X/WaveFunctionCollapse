@@ -21,45 +21,23 @@ public class WaveFunction : MonoBehaviour
     {
         Instance = this;
 
+        CalculateNeighbours();
+
         spaces = new GameObject[8, 5];
         CreateGridSpaces();
+    }
 
-        CalculateNeighbours();
+    public void Solve()
+    {
+        while (Collapse()) ;
     }
 
     public void SolveOnce()
     {
-        GridSpace lowestEntropy = null;
-
-        for (int i = 0; i < 8; i++)
-        {
-            for (int j = 0; j < 5; j++)
-            {
-                GridSpace space = spaces[i, j].GetComponent<GridSpace>();
-                if (space.prototypeCount > 0)
-                {
-                    if (lowestEntropy == null || lowestEntropy.prototypeCount > space.prototypeCount)
-                        lowestEntropy = space;
-                }               
-            }
-        }
-
-        if (lowestEntropy == null)
-        {
-            return;
-        }
-        else if (lowestEntropy.prototypeCount == 1)
-        {
-            lowestEntropy.PrototypePicked(lowestEntropy.tiles[0]);
-        }
-        else if (lowestEntropy.prototypeCount > 1)
-        {
-            int rand = UnityEngine.Random.Range(0, lowestEntropy.prototypeCount);
-            lowestEntropy.PrototypePicked(lowestEntropy.tiles[rand]);
-        }
+        Collapse();
     }
 
-    public void RestartGrid()
+    public void ResetGridCheck()
     {
         foreach (GameObject obj in spaces)
         {
@@ -88,6 +66,20 @@ public class WaveFunction : MonoBehaviour
                     prototype.pY.Add(neighbour);
             }
         }
+    }
+
+    public void Restart()
+    {
+        for (int i = 7; i >= 0; i--)
+        {
+            for (int j = 4; j >= 0; j--)
+            {
+                Destroy(spaces[i, j]);
+            }
+        }
+
+        spaces = new GameObject[8, 5];
+        CreateGridSpaces();
     }
 
     private void CreateGridSpaces()
@@ -119,5 +111,38 @@ public class WaveFunction : MonoBehaviour
                     spaces[i, j].GetComponent<GridSpace>().neighbours.Add(spaces[i, j + 1]);
             }
         }
+    }
+
+    private bool Collapse()
+    {
+        GridSpace lowestEntropy = null;
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                GridSpace space = spaces[i, j].GetComponent<GridSpace>();
+                if (space.prototypeCount > 0)
+                {
+                    if (lowestEntropy == null || lowestEntropy.prototypeCount > space.prototypeCount)
+                        lowestEntropy = space;
+                }
+            }
+        }
+
+        if (lowestEntropy == null)
+        {
+            return false;
+        }
+        else if (lowestEntropy.prototypeCount == 1)
+        {
+            lowestEntropy.PrototypePicked(lowestEntropy.tiles[0]);
+        }
+        else if (lowestEntropy.prototypeCount > 1)
+        {
+            int rand = UnityEngine.Random.Range(0, lowestEntropy.prototypeCount);
+            lowestEntropy.PrototypePicked(lowestEntropy.tiles[rand]);
+        }
+        return true;
     }
 }
