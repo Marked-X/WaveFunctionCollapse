@@ -15,11 +15,56 @@ public class WaveFunction : MonoBehaviour
     public GameObject tilePrefab = null;
     public GameObject gridSpacePrefab = null;
 
+    private GameObject[,] spaces = null;
+
     private void Start()
     {
         Instance = this;
 
+        spaces = new GameObject[8, 5];
         CreateGridSpaces();
+
+        CalculateNeighbours();
+    }
+
+    public void SolveOnce()
+    {
+        GridSpace lowestEntropy = null;
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                GridSpace space = spaces[i, j].GetComponent<GridSpace>();
+                if (space.prototypeCount > 0)
+                {
+                    if (lowestEntropy == null || lowestEntropy.prototypeCount > space.prototypeCount)
+                        lowestEntropy = space;
+                }               
+            }
+        }
+
+        if (lowestEntropy == null)
+        {
+            return;
+        }
+        else if (lowestEntropy.prototypeCount == 1)
+        {
+            lowestEntropy.PrototypePicked(lowestEntropy.tiles[0]);
+        }
+        else if (lowestEntropy.prototypeCount > 1)
+        {
+            int rand = UnityEngine.Random.Range(0, lowestEntropy.prototypeCount);
+            lowestEntropy.PrototypePicked(lowestEntropy.tiles[rand]);
+        }
+    }
+
+    public void RestartGrid()
+    {
+        foreach (GameObject obj in spaces)
+        {
+            obj.GetComponent<GridSpace>().isChecked = false;
+        }
     }
 
     public void CalculateNeighbours()
@@ -30,7 +75,6 @@ public class WaveFunction : MonoBehaviour
         {
             prototype.ClearNeighbours();
             neighbours = new List<Prototype>(prototypes);
-            neighbours.Remove(prototype);
 
             foreach (Prototype neighbour in neighbours)
             {
@@ -48,8 +92,6 @@ public class WaveFunction : MonoBehaviour
 
     private void CreateGridSpaces()
     {
-        GameObject[,] spaces = new GameObject[8, 5];
-
         for (int i = 0; i < 8; i++)
         {
             for (int j = 0; j < 5; j++)

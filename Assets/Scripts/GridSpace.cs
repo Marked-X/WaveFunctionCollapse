@@ -7,97 +7,139 @@ using UnityEngine.UI;
 public class GridSpace : MonoBehaviour
 {
     public List<GameObject> neighbours = new List<GameObject>();
-    public List<Tile> tiles = null;
+    public List<GameObject> tiles = new List<GameObject>();
+    public int prototypeCount = 0;
     public GameObject tilePrefab = null;
     public int X;
     public int Y;
+    public bool isChecked = false;
+
+    enum Sides
+    {
+        Up, Down, Left, Right
+    }
 
     public void Initialize()
     {
-        for (int i = 0; i < 12; i++)
+        prototypeCount = WaveFunction.Instance.prototypes.Count;
+        for (int i = 0; i < prototypeCount; i++)
         {
             GameObject temp = Instantiate(tilePrefab, transform);
             temp.GetComponent<Tile>().Initialize(WaveFunction.Instance.prototypes[i]);
-            temp.GetComponent<Button>().onClick.AddListener(delegate { TilePressed(temp); });
+            temp.GetComponent<Button>().onClick.AddListener(delegate { PrototypePicked(temp); });
+            tiles.Add(temp);
         }
     }
 
-    public void TilePressed(GameObject tile)
+    public void PrototypePicked(GameObject choosenPrototype)
     {
         gameObject.GetComponent<GridLayoutGroup>().enabled = false;
-        tile.transform.localPosition= Vector3.zero;
-        tile.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 100f);
-        tile.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 100f);
+        choosenPrototype.transform.localPosition = Vector3.zero;
+        choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 100f);
+        choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 100f);
 
-        foreach (Transform child in transform)
+        for (int i = tiles.Count - 1; i >= 0; i--)
         {
-            if(child.gameObject != tile)
+            if (tiles[i] != choosenPrototype)
             {
-                tiles.Remove(child.gameObject.GetComponent<Tile>());
-                Destroy(child.gameObject);
+                Destroy(tiles[i]);
+                tiles.RemoveAt(i);
             }
         }
+
+        prototypeCount = -1;
 
         foreach (GameObject neighbour in neighbours)
         {
             neighbour.GetComponent<GridSpace>().neighbours.Remove(gameObject);
         }
 
-        WaveCollapse();
+        Propagate(gameObject);
     }
 
-    private void WaveCollapse()
+    private void Propagate(GameObject mainObj)
     {
-        Prototype prototype = gameObject.GetComponentInChildren<Tile>().prototype;
+        Queue<GridSpace> queue = new Queue<GridSpace>();
+        queue.Enqueue(mainObj.GetComponent<GridSpace>());
 
-        foreach(GameObject neighbour in neighbours)
+        while (queue.Count > 0)
         {
-            GridSpace temp = neighbour.GetComponent<GridSpace>();
+            GridSpace currentGridSpace = queue.Dequeue();
 
-            /*
-            GridSpace temp = neighbour.GetComponent<GridSpace>();
-            if (temp.X != X)
+            foreach (GameObject neighbour in currentGridSpace.neighbours)
             {
-                if (temp.X < X)
-                    foreach (GameObject smallSpace in temp.smallSpaces)
-                    {
-                        if (!prototype.nX.Contains(smallSpace.GetComponentInChildren<Tile>().prototype))
-                        {
-                            smallSpaces.Remove(smallSpace);
-                            //Destroy(smallSpace);
-                        }
-                    }
-                else if (temp.X > X)
-                    foreach (GameObject smallSpace in temp.smallSpaces)
-                    {
-                        if (!prototype.pX.Contains(smallSpace.GetComponentInChildren<Tile>().prototype))
-                        {
-                            smallSpaces.Remove(smallSpace);
-                            //Destroy(smallSpace);
-                        }
-                    }
-            } 
+                GridSpace neighbourGridSpace = neighbour.GetComponent<GridSpace>();
+                if (neighbourGridSpace.isChecked == false)
+                {
+                    Sides side = CheckSide(currentGridSpace, neighbourGridSpace);
+                    Constrain(currentGridSpace, neighbourGridSpace, side);
+
+                    if (!queue.Contains(neighbourGridSpace))
+                        queue.Enqueue(neighbourGridSpace);
+                }
+            }
+
+            currentGridSpace.isChecked = true;
+        }
+
+        WaveFunction.Instance.RestartGrid();
+    }
+
+    private Sides CheckSide(GridSpace main, GridSpace neighbour)
+    {
+        if (neighbour.X != main.X)
+        {
+            if (neighbour.X < main.X)
+                return Sides.Left;
             else
+                return Sides.Right;
+        }
+        else
+        {
+            if (neighbour.Y < main.Y)
+                return Sides.Down;
+            else
+                return Sides.Up;
+        }
+    }
+
+    private void Constrain(GridSpace first, GridSpace second, Sides side)
+    {
+        List<Prototype> possibleList = new List<Prototype>();
+
+        foreach (GameObject tile in first.tiles)
+        {
+            List<Prototype> listToCheck = null;
+            switch (side)
             {
-                if (temp.Y > Y)
-                    foreach (GameObject smallSpace in temp.smallSpaces)
-                    {
-                        if (!prototype.pY.Contains(smallSpace.GetComponentInChildren<Tile>().prototype))
-                        {
-                            smallSpaces.Remove(smallSpace);
-                            //Destroy(smallSpace);
-                        }
-                    }
-                else if (temp.Y < Y)
-                    foreach (GameObject smallSpace in temp.smallSpaces)
-                    {
-                        if (!prototype.nY.Contains(smallSpace.GetComponentInChildren<Tile>().prototype))
-                        {
-                            smallSpaces.Remove(smallSpace);
-                            //Destroy(smallSpace);
-                        }
-                    }
-            }*/
+                case Sides.Up:
+                    listToCheck = tile.GetComponent<Tile>().prototype.pY;
+                    break;
+                case Sides.Down:
+                    listToCheck = tile.GetComponent<Tile>().prototype.nY;
+                    break;
+                case Sides.Left:
+                    listToCheck = tile.GetComponent<Tile>().prototype.nX;
+                    break;
+                case Sides.Right:
+                    listToCheck = tile.GetComponent<Tile>().prototype.pX;
+                    break;
+            }
+            foreach (Prototype prot in listToCheck)
+            {
+                if (!possibleList.Contains(prot))
+                    possibleList.Add(prot);
+            }
+        }
+        
+        for (int i = second.tiles.Count - 1; i >= 0; i--)
+        { 
+            if (!possibleList.Contains(second.tiles[i].GetComponent<Tile>().prototype))
+            {
+                Destroy(second.tiles[i]);
+                second.tiles.RemoveAt(i);
+                second.prototypeCount--;
+            }
         }
     }
 }
