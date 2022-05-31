@@ -37,6 +37,7 @@ public class GridSpace : MonoBehaviour
         choosenPrototype.transform.localPosition = Vector3.zero;
         choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 100f);
         choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 100f);
+        choosenPrototype.GetComponent<Tile>().Appear();
 
         for (int i = tiles.Count - 1; i >= 0; i--)
         {
@@ -133,10 +134,11 @@ public class GridSpace : MonoBehaviour
         }
         
         for (int i = second.tiles.Count - 1; i >= 0; i--)
-        { 
-            if (!possibleList.Contains(second.tiles[i].GetComponent<Tile>().prototype))
+        {
+            Tile temp = second.tiles[i].GetComponent<Tile>();
+            if (!possibleList.Contains(temp.prototype))
             {
-                Destroy(second.tiles[i]);
+                temp.Remove();
                 second.tiles.RemoveAt(i);
                 second.prototypeCount--;
             }
