@@ -22,10 +22,16 @@ public class Tile : MonoBehaviour
     {
         animator.Play("TileAppear");
     }
+    public void TileChoosen()
+    {
+        animator.Play("TileAppear");
+        gameObject.GetComponent<Button>().enabled = false;
+    }
 
     public void Remove()
     {
         animator.Play("TileRemoved");
+        gameObject.GetComponent<Button>().enabled = false;
     }
 
     public void OnTileRemoved()

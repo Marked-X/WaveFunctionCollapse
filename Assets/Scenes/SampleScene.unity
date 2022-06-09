@@ -1624,10 +1624,10 @@ MonoBehaviour:
   m_FillRect: {fileID: 455317680}
   m_HandleRect: {fileID: 980627823}
   m_Direction: 0
-  m_MinValue: 0.1
-  m_MaxValue: 1
-  m_WholeNumbers: 0
-  m_Value: 0.1
+  m_MinValue: 1
+  m_MaxValue: 10
+  m_WholeNumbers: 1
+  m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2500,6 +2500,7 @@ MonoBehaviour:
   gridSpace: {fileID: 81016014}
   tilePrefab: {fileID: 1534105838985615965, guid: 54d21f91c9018a541836266a555df9c6, type: 3}
   gridSpacePrefab: {fileID: 2949442243690595894, guid: 026fbd6aa6f1f104e84e20078572bdde, type: 3}
+  speedSlider: {fileID: 833980199}
 --- !u!4 &1389956383
 Transform:
   m_ObjectHideFlags: 0

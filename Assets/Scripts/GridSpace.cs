@@ -14,14 +14,10 @@ public class GridSpace : MonoBehaviour
     public int Y;
     public bool isChecked = false;
 
-    enum Sides
-    {
-        Up, Down, Left, Right
-    }
-
     public void Initialize()
     {
         prototypeCount = WaveFunction.Instance.prototypes.Count;
+        WaveFunction.Instance.IsPropogating = false;
         for (int i = 0; i < prototypeCount; i++)
         {
             GameObject temp = Instantiate(tilePrefab, transform);
@@ -33,11 +29,14 @@ public class GridSpace : MonoBehaviour
 
     public void PrototypePicked(GameObject choosenPrototype)
     {
+        if (WaveFunction.Instance.IsPropogating)
+            return;
+
         gameObject.GetComponent<GridLayoutGroup>().enabled = false;
         choosenPrototype.transform.localPosition = Vector3.zero;
         choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 100f);
         choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 100f);
-        choosenPrototype.GetComponent<Tile>().Appear();
+        choosenPrototype.GetComponent<Tile>().TileChoosen();
 
         for (int i = tiles.Count - 1; i >= 0; i--)
         {
@@ -55,93 +54,7 @@ public class GridSpace : MonoBehaviour
             neighbour.GetComponent<GridSpace>().neighbours.Remove(gameObject);
         }
 
-        Propagate(gameObject);
-    }
-
-    private void Propagate(GameObject mainObj)
-    {
-        Queue<GridSpace> queue = new Queue<GridSpace>();
-        queue.Enqueue(mainObj.GetComponent<GridSpace>());
-
-        while (queue.Count > 0)
-        {
-            GridSpace currentGridSpace = queue.Dequeue();
-
-            foreach (GameObject neighbour in currentGridSpace.neighbours)
-            {
-                GridSpace neighbourGridSpace = neighbour.GetComponent<GridSpace>();
-                if (neighbourGridSpace.isChecked == false)
-                {
-                    Sides side = CheckSide(currentGridSpace, neighbourGridSpace);
-                    Constrain(currentGridSpace, neighbourGridSpace, side);
-
-                    if (!queue.Contains(neighbourGridSpace))
-                        queue.Enqueue(neighbourGridSpace);
-                }
-            }
-
-            currentGridSpace.isChecked = true;
-        }
-
-        WaveFunction.Instance.ResetGridCheck();
-    }
-
-    private Sides CheckSide(GridSpace main, GridSpace neighbour)
-    {
-        if (neighbour.X != main.X)
-        {
-            if (neighbour.X < main.X)
-                return Sides.Left;
-            else
-                return Sides.Right;
-        }
-        else
-        {
-            if (neighbour.Y < main.Y)
-                return Sides.Down;
-            else
-                return Sides.Up;
-        }
-    }
-
-    private void Constrain(GridSpace first, GridSpace second, Sides side)
-    {
-        List<Prototype> possibleList = new List<Prototype>();
-
-        foreach (GameObject tile in first.tiles)
-        {
-            List<Prototype> listToCheck = null;
-            switch (side)
-            {
-                case Sides.Up:
-                    listToCheck = tile.GetComponent<Tile>().prototype.pY;
-                    break;
-                case Sides.Down:
-                    listToCheck = tile.GetComponent<Tile>().prototype.nY;
-                    break;
-                case Sides.Left:
-                    listToCheck = tile.GetComponent<Tile>().prototype.nX;
-                    break;
-                case Sides.Right:
-                    listToCheck = tile.GetComponent<Tile>().prototype.pX;
-                    break;
-            }
-            foreach (Prototype prot in listToCheck)
-            {
-                if (!possibleList.Contains(prot))
-                    possibleList.Add(prot);
-            }
-        }
-        
-        for (int i = second.tiles.Count - 1; i >= 0; i--)
-        {
-            Tile temp = second.tiles[i].GetComponent<Tile>();
-            if (!possibleList.Contains(temp.prototype))
-            {
-                temp.Remove();
-                second.tiles.RemoveAt(i);
-                second.prototypeCount--;
-            }
-        }
+        WaveFunction.Instance.IsPropogating = true;
+        StartCoroutine(WaveFunction.Instance.Propagate(gameObject));
     }
 }

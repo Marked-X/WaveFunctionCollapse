@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class WaveFunction : MonoBehaviour
 {
     public static WaveFunction Instance = null;
+    public bool IsPropogating { get; set; }
 
     public List<Prototype> prototypes = null;
 
@@ -14,8 +15,13 @@ public class WaveFunction : MonoBehaviour
 
     public GameObject tilePrefab = null;
     public GameObject gridSpacePrefab = null;
+    public Slider speedSlider = null;
 
     private GameObject[,] spaces = null;
+    private enum Sides
+    {
+        Up, Down, Left, Right
+    }
 
     private void Start()
     {
@@ -29,12 +35,14 @@ public class WaveFunction : MonoBehaviour
 
     public void Solve()
     {
-        while (Collapse()) ;
+        if (!IsPropogating)
+            while (Collapse()) ;
     }
 
     public void SolveOnce()
     {
-        Collapse();
+        if (!IsPropogating)
+            Collapse();
     }
 
     public void ResetGridCheck()
@@ -144,5 +152,98 @@ public class WaveFunction : MonoBehaviour
             lowestEntropy.PrototypePicked(lowestEntropy.tiles[rand]);
         }
         return true;
+    }
+
+    public IEnumerator Propagate(GameObject mainObj)
+    {
+        Queue<GridSpace> queue = new Queue<GridSpace>();
+        queue.Enqueue(mainObj.GetComponent<GridSpace>());
+
+        while (queue.Count > 0)
+        {
+            GridSpace currentGridSpace = queue.Dequeue();
+
+            foreach (GameObject neighbour in currentGridSpace.neighbours)
+            {
+                GridSpace neighbourGridSpace = neighbour.GetComponent<GridSpace>();
+                if (neighbourGridSpace.isChecked == false)
+                {
+                    Sides side = CheckSide(currentGridSpace, neighbourGridSpace);
+                    Constrain(currentGridSpace, neighbourGridSpace, side);
+
+                    if (speedSlider.value == 10f)
+                        yield return null;
+                    else
+                        yield return new WaitForSeconds(1f / speedSlider.value);
+
+                    if (!queue.Contains(neighbourGridSpace))
+                        queue.Enqueue(neighbourGridSpace);
+                }
+            }
+
+            currentGridSpace.isChecked = true;
+        }
+
+        ResetGridCheck();
+        IsPropogating = false;
+    }
+
+    private Sides CheckSide(GridSpace main, GridSpace neighbour)
+    {
+        if (neighbour.X != main.X)
+        {
+            if (neighbour.X < main.X)
+                return Sides.Left;
+            else
+                return Sides.Right;
+        }
+        else
+        {
+            if (neighbour.Y < main.Y)
+                return Sides.Down;
+            else
+                return Sides.Up;
+        }
+    }
+
+    private void Constrain(GridSpace first, GridSpace second, Sides side)
+    {
+        List<Prototype> possibleList = new List<Prototype>();
+
+        foreach (GameObject tile in first.tiles)
+        {
+            List<Prototype> listToCheck = null;
+            switch (side)
+            {
+                case Sides.Up:
+                    listToCheck = tile.GetComponent<Tile>().prototype.pY;
+                    break;
+                case Sides.Down:
+                    listToCheck = tile.GetComponent<Tile>().prototype.nY;
+                    break;
+                case Sides.Left:
+                    listToCheck = tile.GetComponent<Tile>().prototype.nX;
+                    break;
+                case Sides.Right:
+                    listToCheck = tile.GetComponent<Tile>().prototype.pX;
+                    break;
+            }
+            foreach (Prototype prot in listToCheck)
+            {
+                if (!possibleList.Contains(prot))
+                    possibleList.Add(prot);
+            }
+        }
+
+        for (int i = second.tiles.Count - 1; i >= 0; i--)
+        {
+            Tile temp = second.tiles[i].GetComponent<Tile>();
+            if (!possibleList.Contains(temp.prototype))
+            {
+                temp.Remove();
+                second.tiles.RemoveAt(i);
+                second.prototypeCount--;
+            }
+        }
     }
 }
