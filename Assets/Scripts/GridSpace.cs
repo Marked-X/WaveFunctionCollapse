@@ -17,7 +17,6 @@ public class GridSpace : MonoBehaviour
     public void Initialize()
     {
         prototypeCount = WaveFunction.Instance.prototypes.Count;
-        WaveFunction.Instance.IsPropogating = false;
         for (int i = 0; i < prototypeCount; i++)
         {
             GameObject temp = Instantiate(tilePrefab, transform);
@@ -29,9 +28,6 @@ public class GridSpace : MonoBehaviour
 
     public void PrototypePicked(GameObject choosenPrototype)
     {
-        if (WaveFunction.Instance.IsPropogating)
-            return;
-
         gameObject.GetComponent<GridLayoutGroup>().enabled = false;
         choosenPrototype.transform.localPosition = Vector3.zero;
         choosenPrototype.GetComponent<RectTransform>().SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 100f);
@@ -42,7 +38,7 @@ public class GridSpace : MonoBehaviour
         {
             if (tiles[i] != choosenPrototype)
             {
-                Destroy(tiles[i]);
+                tiles[i].GetComponent<Tile>().Remove();
                 tiles.RemoveAt(i);
             }
         }
@@ -54,7 +50,19 @@ public class GridSpace : MonoBehaviour
             neighbour.GetComponent<GridSpace>().neighbours.Remove(gameObject);
         }
 
-        WaveFunction.Instance.IsPropogating = true;
-        StartCoroutine(WaveFunction.Instance.Propagate(gameObject));
+        WaveFunction.Instance.Propagate(gameObject);
+    }
+
+    public void ConstrainByList(List<Prototype> possibleList)
+    {
+        for (int i = tiles.Count - 1; i >= 0; i--)
+        {
+            if (!possibleList.Contains(tiles[i].GetComponent<Tile>().prototype))
+            {
+                prototypeCount--;
+                tiles[i].GetComponent<Tile>().Remove();
+                tiles.RemoveAt(i);
+            }
+        }
     }
 }

@@ -18,10 +18,6 @@ public class Tile : MonoBehaviour
         }
     }
 
-    public void Appear()
-    {
-        animator.Play("TileAppear");
-    }
     public void TileChoosen()
     {
         animator.Play("TileAppear");
@@ -32,10 +28,5 @@ public class Tile : MonoBehaviour
     {
         animator.Play("TileRemoved");
         gameObject.GetComponent<Button>().enabled = false;
-    }
-
-    public void OnTileRemoved()
-    {
-        gameObject.GetComponent<Image>().enabled = false;
     }
 }

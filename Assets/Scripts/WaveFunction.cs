@@ -7,17 +7,18 @@ using UnityEngine.UI;
 public class WaveFunction : MonoBehaviour
 {
     public static WaveFunction Instance = null;
-    public bool IsPropogating { get; set; }
 
     public List<Prototype> prototypes = null;
 
     public GameObject gridSpace = null;
+    public int horizontalGridSpaces = 8;
+    public int verticalGridSpaces = 5;
 
     public GameObject tilePrefab = null;
     public GameObject gridSpacePrefab = null;
-    public Slider speedSlider = null;
 
     private GameObject[,] spaces = null;
+
     private enum Sides
     {
         Up, Down, Left, Right
@@ -29,20 +30,18 @@ public class WaveFunction : MonoBehaviour
 
         CalculateNeighbours();
 
-        spaces = new GameObject[8, 5];
+        spaces = new GameObject[horizontalGridSpaces, verticalGridSpaces];
         CreateGridSpaces();
     }
 
     public void Solve()
     {
-        if (!IsPropogating)
-            while (Collapse()) ;
+        while (Collapse()) ;
     }
 
     public void SolveOnce()
     {
-        if (!IsPropogating)
-            Collapse();
+        Collapse();
     }
 
     public void ResetGridCheck()
@@ -78,23 +77,23 @@ public class WaveFunction : MonoBehaviour
 
     public void Restart()
     {
-        for (int i = 7; i >= 0; i--)
+        for (int i = horizontalGridSpaces - 1; i >= 0; i--)
         {
-            for (int j = 4; j >= 0; j--)
+            for (int j = verticalGridSpaces - 1; j >= 0; j--)
             {
                 Destroy(spaces[i, j]);
             }
         }
 
-        spaces = new GameObject[8, 5];
+        spaces = new GameObject[horizontalGridSpaces, verticalGridSpaces];
         CreateGridSpaces();
     }
 
     private void CreateGridSpaces()
     {
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < horizontalGridSpaces; i++)
         {
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < verticalGridSpaces; j++)
             {
                 spaces[i, j] = Instantiate(gridSpacePrefab, gridSpace.transform);
                 spaces[i, j].transform.localPosition = new Vector3(i * 100, j * 100);
@@ -105,17 +104,17 @@ public class WaveFunction : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < horizontalGridSpaces; i++)
         {
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < verticalGridSpaces; j++)
             {
                 if (i - 1 >= 0)
                     spaces[i, j].GetComponent<GridSpace>().neighbours.Add(spaces[i - 1, j]);
-                if (i + 1 < 8)
+                if (i + 1 < horizontalGridSpaces)
                     spaces[i, j].GetComponent<GridSpace>().neighbours.Add(spaces[i + 1, j]);
                 if (j - 1 >= 0)
                     spaces[i, j].GetComponent<GridSpace>().neighbours.Add(spaces[i, j - 1]);
-                if (j + 1 < 5)
+                if (j + 1 < verticalGridSpaces)
                     spaces[i, j].GetComponent<GridSpace>().neighbours.Add(spaces[i, j + 1]);
             }
         }
@@ -125,9 +124,9 @@ public class WaveFunction : MonoBehaviour
     {
         GridSpace lowestEntropy = null;
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < horizontalGridSpaces; i++)
         {
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < verticalGridSpaces; j++)
             {
                 GridSpace space = spaces[i, j].GetComponent<GridSpace>();
                 if (space.prototypeCount > 0)
@@ -154,40 +153,6 @@ public class WaveFunction : MonoBehaviour
         return true;
     }
 
-    public IEnumerator Propagate(GameObject mainObj)
-    {
-        Queue<GridSpace> queue = new Queue<GridSpace>();
-        queue.Enqueue(mainObj.GetComponent<GridSpace>());
-
-        while (queue.Count > 0)
-        {
-            GridSpace currentGridSpace = queue.Dequeue();
-
-            foreach (GameObject neighbour in currentGridSpace.neighbours)
-            {
-                GridSpace neighbourGridSpace = neighbour.GetComponent<GridSpace>();
-                if (neighbourGridSpace.isChecked == false)
-                {
-                    Sides side = CheckSide(currentGridSpace, neighbourGridSpace);
-                    Constrain(currentGridSpace, neighbourGridSpace, side);
-
-                    if (speedSlider.value == 10f)
-                        yield return null;
-                    else
-                        yield return new WaitForSeconds(1f / speedSlider.value);
-
-                    if (!queue.Contains(neighbourGridSpace))
-                        queue.Enqueue(neighbourGridSpace);
-                }
-            }
-
-            currentGridSpace.isChecked = true;
-        }
-
-        ResetGridCheck();
-        IsPropogating = false;
-    }
-
     private Sides CheckSide(GridSpace main, GridSpace neighbour)
     {
         if (neighbour.X != main.X)
@@ -204,6 +169,34 @@ public class WaveFunction : MonoBehaviour
             else
                 return Sides.Up;
         }
+    }
+
+    public void Propagate(GameObject mainObj)
+    {
+        Queue<GridSpace> queue = new Queue<GridSpace>();
+        queue.Enqueue(mainObj.GetComponent<GridSpace>());
+
+        while (queue.Count > 0)
+        {
+            GridSpace currentGridSpace = queue.Dequeue();
+
+            foreach (GameObject neighbour in currentGridSpace.neighbours)
+            {
+                GridSpace neighbourGridSpace = neighbour.GetComponent<GridSpace>();
+                if (neighbourGridSpace.isChecked == false)
+                {
+                    Sides side = CheckSide(currentGridSpace, neighbourGridSpace);
+                    Constrain(currentGridSpace, neighbourGridSpace, side);
+
+                    if (!queue.Contains(neighbourGridSpace))
+                        queue.Enqueue(neighbourGridSpace);
+                }
+            }
+
+            currentGridSpace.isChecked = true;
+        }
+
+        ResetGridCheck();
     }
 
     private void Constrain(GridSpace first, GridSpace second, Sides side)
@@ -235,15 +228,6 @@ public class WaveFunction : MonoBehaviour
             }
         }
 
-        for (int i = second.tiles.Count - 1; i >= 0; i--)
-        {
-            Tile temp = second.tiles[i].GetComponent<Tile>();
-            if (!possibleList.Contains(temp.prototype))
-            {
-                temp.Remove();
-                second.tiles.RemoveAt(i);
-                second.prototypeCount--;
-            }
-        }
+        second.ConstrainByList(possibleList);
     }
 }
