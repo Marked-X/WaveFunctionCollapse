@@ -13,8 +13,6 @@ public class Prototype : ScriptableObject
     public int posY;
     public int negY;
 
-    int weight = 0;
-
     public List<Prototype> pX = new List<Prototype>();
     public List<Prototype> nX = new List<Prototype>();
     public List<Prototype> pY = new List<Prototype>();
